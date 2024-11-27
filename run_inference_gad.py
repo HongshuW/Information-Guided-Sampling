@@ -130,10 +130,6 @@ def run_inference_gad_loading_trie(model, tokenizer):
     input_ids = input_ids.to(model.device)
 
     start_time = time.time()
-    outputs = []
-    # trie = load_oracle_trie(trie_file) # This is oracle trie constructed from gcd
-    before_trie_status = "gad_before"
-    after_trie_status = "gad_after"
     adjusted_trie_before = Trie()
     adjusted_trie_after = Trie()
     for i in tqdm(range(NUM_ITER), desc="Running Inference"):
@@ -152,18 +148,8 @@ def run_inference_gad_loading_trie(model, tokenizer):
         print(f"result: {result}")
 
         json_record = json.dumps(result)
-        #outfile.write(json_record + '\n')
-        #outfile.flush()
-        #os.fsync(outfile.fileno())
 
-    # trie_file_before = construct_trie_file_from_folder(args, test_filename, before_trie_status)
-    # trie_file_after = construct_trie_file_from_folder(args, test_filename, after_trie_status)
-    # save_trie_to_pkl(adjusted_trie_before, trie_file_before)
-    # print(f"GAD before trie saved to {trie_file_before}")
-    # save_trie_to_pkl(adjusted_trie_after, trie_file_after)
-    # print(f"GAD after trie saved to {trie_file_after}")
     end_time = time.time()
-    # print(f"GAD results saved to {gad_output_file_path}")
     print(f"Total execution time: {end_time - start_time:.2f} seconds.")
 
 
