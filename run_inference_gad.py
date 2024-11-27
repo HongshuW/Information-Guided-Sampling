@@ -1,17 +1,12 @@
 import torch
-import json
-import pickle
 from transformers import AutoModelForCausalLM, AutoTokenizer
 from transformers.generation.logits_process import LogitsProcessorList, InfNanRemoveLogitsProcessor
 from transformers_gad.grammar_utils import IncrementalGrammarConstraint
 from transformers_gad.generation.gad_logits_processor_oracle import GrammarAlignedOracleLogitsProcessor
 from transformers_gad.build_oracle.build_oracle_trie import Trie, update_oracle_trie
-import os
 import numpy as np
-import json
 from tqdm import tqdm
 import time
-
 
 NUM_ITER = 10
 MODEL_ID = "TinyLlama/TinyLlama_v1.1" # pretrained llm
@@ -24,35 +19,6 @@ TEMPERATURE = 1.0
 REPETITION_PENALTY = 1.0
 TOP_P = 1.0
 TOP_K = 0
-
-def load_oracle_trie(trie_file):
-    with open(trie_file, 'rb') as f:
-        trie = pickle.load(f)
-    return trie
-
-def construct_gad_output_file_path(args):
-    model_name = args.model_id.split("/")[-1]
-    grammar_prompt_file = args.grammar_prompt_file.split("/")[-1]
-    grammar_prompt_name = grammar_prompt_file.split(".")[0]
-    output_file_path = os.path.join(args.output_folder,
-                                    f"gad_g-{grammar_prompt_name}_{model_name}_p-{args.prompt_type}_i{args.iter}_{args.device}_sd{args.seed}_{args.dtype}.jsonl")
-    output_directory = os.path.dirname(output_file_path)
-    # Ensure the directory exists
-    if not os.path.exists(output_directory):
-        os.makedirs(output_directory)
-
-    return output_file_path
-
-def construct_gad_output_file_path_from_folder(args, test_filename):
-    model_name = args.model_id.split("/")[-1]
-    output_file_path = os.path.join(args.output_folder, f"{test_filename}")
-    output_file_path = os.path.join(output_file_path, f"gad_{model_name}_i{args.iter}_{args.device}_sd{args.seed}_{args.dtype}.jsonl")
-    output_directory = os.path.dirname(output_file_path)
-    # Ensure the directory exists
-    if not os.path.exists(output_directory):
-        os.makedirs(output_directory)
-
-    return output_file_path
 
 @torch.inference_mode()
 def inference_gad(model, tokenizer, prompt, grammar_str, trie):
@@ -92,7 +58,9 @@ def inference_gad(model, tokenizer, prompt, grammar_str, trie):
 
     input_length = 1 if model.config.is_encoder_decoder else input_ids.shape[1]
     generated_tokens = output.sequences[:, input_length:]
+    # Track whether each token is grammatically valid based on the initial grammar constraints
     acceptance_details_history = gad_oracle_processor.acceptance_details_history
+    # Refined information after evaluating the grammatical validity of the sequence with additional adjustments (e.g., after sampling)
     adjusted_acceptance_details_history = gad_oracle_processor.adjusted_acceptance_details_history
     generations = tokenizer.batch_decode(generated_tokens, skip_special_tokens=True)
 
@@ -133,11 +101,27 @@ def run_inference_gad_loading_trie(model, tokenizer):
     adjusted_trie_before = Trie()
     adjusted_trie_after = Trie()
     for i in tqdm(range(NUM_ITER), desc="Running Inference"):
+        """Draw sample from the LLM, incorporating trie and EFG"""
         generated_tokens, acceptance_details_history, adjusted_acceptance_details_history, generations, metas, sum_log_prob = inference_gad(model, tokenizer, prompt, grammar_str, adjusted_trie_before)
         # print(f"generated_tokens: {generated_tokens}, acceptance_details_history: {acceptance_details_history}")
+        
+        """
+        Add sampled string to S:
+        1. Update adjusted_trie_before using initial grammar acceptance details
+        2. Computes updated_rate indicating how much the trie was modified.
+        """
         _, updated_rate = update_oracle_trie(adjusted_trie_before, generated_tokens, acceptance_details_history)
+
+        """
+        Adjust EFG:
+        Update adjusted_trie_before using refined acceptance details
+        """
         update_oracle_trie(adjusted_trie_before, generated_tokens, adjusted_acceptance_details_history)
-        update_oracle_trie(adjusted_trie_after, generated_tokens, adjusted_acceptance_details_history)
+
+        """
+        Update adjusted_trie_after with refined acceptance details
+        """
+        #update_oracle_trie(adjusted_trie_after, generated_tokens, adjusted_acceptance_details_history)
 
         result = {"answer": generations,
                   "sum_log_prob": sum_log_prob,
@@ -146,8 +130,6 @@ def run_inference_gad_loading_trie(model, tokenizer):
                   "prompt": prompt
                   }
         print(f"result: {result}")
-
-        json_record = json.dumps(result)
 
     end_time = time.time()
     print(f"Total execution time: {end_time - start_time:.2f} seconds.")
