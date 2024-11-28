@@ -122,7 +122,7 @@ class GrammarAlignedOracleLogitsProcessor(LogitsProcessor):
                 log_logit = log_logits[batch_index, idx].item()
 
                 # 1. Assign informative levels based on trie exploration
-                informativeness = self.oracle_trie.get_informativeness_for_candidate_token(current_parent, token_id)
+                informativeness = self.oracle_trie.get_informativeness_for_candidate_token_v1(current_parent, token_id)
                 informative_levels[i] = informativeness
                 i += 1
 

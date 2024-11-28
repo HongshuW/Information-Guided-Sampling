@@ -11,6 +11,7 @@ class TrieNode:
         self.raw_logit = raw_logit
         self.raw_score = raw_score
         self.success_rate = 1
+        self.informativeness = 1
         # isEndOfWord is True if node represent EOS
         self.is_end_of_sequence = False
         self.is_start_of_sequence = False
@@ -39,6 +40,25 @@ class Trie:
             return self.update_success_rate(parent_node)
         else:
             return 0
+
+    def backtrack_to_update_informativeness(self, node: TrieNode):
+        if node:
+            self.update_informativeness(node)
+            print(f"token ", node.token, ", informativeness ", node.informativeness)
+            if node.parent:
+                self.backtrack_to_update_informativeness(node.parent)
+
+    def update_informativeness(self, node: TrieNode):
+        if node.token_id == 2:
+            # node cannot be expanded further
+            node.informativeness = 0
+        if node and node.children:
+            score = 0
+            for child in node.children:
+                child_node = node.children[child]
+                score += child_node.informativeness
+            node.informativeness = score / len(node.children)
+        return node.informativeness
 
     def update_success_rate(self, node: TrieNode):
         if node and node.children:
@@ -71,7 +91,7 @@ class Trie:
         else:
             return None
 
-    def get_informativeness_for_candidate_token(self, parent_node, candidate_token_id):
+    def get_informativeness_for_candidate_token_v0(self, parent_node, candidate_token_id):
         if parent_node is None:
             return 1
         if candidate_token_id in parent_node.children.keys():
@@ -81,6 +101,21 @@ class Trie:
                 return 0
         else:
             return 1
+    
+    def get_informativeness_for_candidate_token_v1(self, parent_node, candidate_token_id):
+        if parent_node is None:
+            return 1
+        if candidate_token_id in parent_node.children.keys():
+            current_node = parent_node.children[candidate_token_id]
+            return current_node.informativeness
+            # if current_node.success_rate == 1:
+            #     # current substring hasn't been explored
+            #     return current_node.informativeness
+            # else:
+            #     # current substring has been explored, find average among children
+            #     return self.update_informativeness(current_node)
+        else:
+            return parent_node.informativeness
 
     def get_success_rate_for_candidate_token(self, parent_node, candidate_token_id):
         if parent_node is None:
@@ -231,6 +266,18 @@ def insert_nodes_by_generated_tokens(trie, generated_tokens, nodes):
 
     return updated_total
 
+def update_informativeness_bottom_up(trie, nodes):
+    last_node = None
+    for time_step, candidate_list in reversed(list(enumerate(nodes))):
+        for batch in candidate_list:
+            for node in batch:
+                if len(node.children) > 0 or len(batch) == 1:
+                    trie.update_informativeness(node)
+                    last_node = node
+                    print(f"At time step ", time_step, ", token ", node.token, ", informativeness ", node.informativeness)
+    if last_node:
+        trie.backtrack_to_update_informativeness(last_node.parent)
+
 def run_demo_trie_string_01_len_3():
     # Your input
     generated_tokens = torch.tensor([[28740, 28734, 28740, 2]])
@@ -294,6 +341,7 @@ def run_demo_trie_string_01_len_3():
 def update_oracle_trie(trie, generated_tokens, detailed_history):
     nodes = create_nodes_from_history(detailed_history)
     updated_rate = insert_nodes_by_generated_tokens(trie, generated_tokens, nodes)
+    update_informativeness_bottom_up(trie, nodes)
 
     return trie, updated_rate
 

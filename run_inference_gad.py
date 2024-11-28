@@ -8,7 +8,7 @@ import numpy as np
 from tqdm import tqdm
 import time
 
-NUM_ITER = 10
+NUM_ITER = 17
 MODEL_ID = "TinyLlama/TinyLlama_v1.1" # pretrained llm
 GRAMMAR_PATH = "examples/test/binary_len_5_0.ebnf"
 # TRIE_PATH = "tries/binary_len_5_0_trie.json"
@@ -58,7 +58,7 @@ def inference_gad(model, tokenizer, prompt, grammar_str, trie):
     )
 
     generated_sequences = output.sequences  # Access the tensor of generated sequences
-    print(generated_sequences.shape)        # Print the shape of the sequences tensor
+    # print(generated_sequences.shape)        # Print the shape of the sequences tensor
     print(generated_sequences)
 
     input_length = 1 if model.config.is_encoder_decoder else input_ids.shape[1]
@@ -134,7 +134,8 @@ def run_inference_gad_loading_trie(model, tokenizer):
                   "updated_rate": updated_rate,
                   "prompt": prompt
                   }
-        print(f"result: {result}")
+        # print(f"result: {result}")
+        print(generations)
 
     end_time = time.time()
     print(f"Total execution time: {end_time - start_time:.2f} seconds.")
