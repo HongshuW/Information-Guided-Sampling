@@ -71,6 +71,14 @@ class Trie:
         else:
             return None
 
+    def get_informativeness_for_candidate_token(self, parent_node, candidate_token_id):
+        if parent_node is None:
+            return 1
+        if candidate_token_id in parent_node.children.keys():
+            return 0
+        else:
+            return 1
+
     def get_success_rate_for_candidate_token(self, parent_node, candidate_token_id):
         if parent_node is None:
             return 1

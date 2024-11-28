@@ -19,8 +19,7 @@ TEMPERATURE = 1.0
 REPETITION_PENALTY = 1.0
 TOP_P = 1.0
 TOP_K = 0
-BEAM_SIZE = 1
-DIVERSITY_PENALTY = 0.5
+BATCH_SIZE = 1
 
 @torch.inference_mode()
 def inference_gad(model, tokenizer, prompt, grammar_str, trie):
@@ -53,13 +52,14 @@ def inference_gad(model, tokenizer, prompt, grammar_str, trie):
         temperature=TEMPERATURE,
         logits_processor=logits_processors,
         repetition_penalty=REPETITION_PENALTY,
-        num_return_sequences=1,
+        num_return_sequences=BATCH_SIZE, # Generate a batch of strings
         return_dict_in_generate=True,
         output_scores=True,
     )
 
     generated_sequences = output.sequences  # Access the tensor of generated sequences
     print(generated_sequences.shape)        # Print the shape of the sequences tensor
+    print(generated_sequences)
 
     input_length = 1 if model.config.is_encoder_decoder else input_ids.shape[1]
     generated_tokens = output.sequences[:, input_length:]

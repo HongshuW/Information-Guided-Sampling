@@ -30,7 +30,7 @@ class GrammarAlignedOracleLogitsProcessor(LogitsProcessor):
 
     def mask_scores(self, input_ids, scores, device):
         """
-        Masks scores based on grammar constraints and dynamically adjusts the effective beam size.
+        Masks scores based on grammar constraints
         """
         # resolve each stack to a tensor of True/False for each token
         # indicating acceptance
@@ -61,36 +61,91 @@ class GrammarAlignedOracleLogitsProcessor(LogitsProcessor):
         scores[~acceptance] = float('-inf')
 
     def apply_oracle_adjustments(self, acceptance, scores, current_parent):
+        """
+        Adjusts logits based on trie informativeness and selects the most informative token with the highest logit.
+        """
+
+        device = scores.device  # Use the same device for calculations
+        batch_size = acceptance.size(0)
+        potential_token_count = acceptance.size(1)
+
         logits = F.softmax(scores, dim=-1)
         log_logits = torch.log(logits)
 
-        for batch_index in range(acceptance.size(0)):
+        for batch_index in range(batch_size):
+
+            # print(f"Batch {batch_index}, Original Scores: {scores[batch_index]}")
+
             accepted_indices = acceptance[batch_index].nonzero().squeeze(-1)
 
+            # Initialize informative levels for all tokens
+            informative_levels = torch.zeros(accepted_indices.size(0), device=device)
+            
+            i = 0
             for idx in accepted_indices:
                 token_id = idx.item()
                 logit = logits[batch_index, idx].item()
                 log_logit = log_logits[batch_index, idx].item()
-                # Assume a method to get theta for this specific token
+
+                # 1. Assign informative levels based on trie exploration
+                informativeness = self.oracle_trie.get_informativeness_for_candidate_token(current_parent, token_id)
+                informative_levels[i] = informativeness
+                i += 1
+
+                # print(f"Batch {batch_index}, Token {token_id}, Informativeness: {informativeness}")
+
+                # 2. Adjust the logits with EFG
                 success_rate = self.oracle_trie.get_success_rate_for_candidate_token(current_parent, token_id)
-                # if args.verbose:
-                #     print(f"token_id: {token_id}")
-                #     print(f"logit: {logit}")
-                #     print(f"log_logit: {log_logit}")
-                #     print(f"successful_rate: {successful_rate}")
-
                 if not isinstance(success_rate, torch.Tensor):
-                    success_rate = torch.tensor(success_rate, dtype=torch.float)
-
+                    success_rate = torch.tensor(success_rate, dtype=torch.float) # Ensure tensor compatibility
                 log_theta = torch.log(success_rate)
                 # Calculate adjusted score
                 adjusted_score = log_logit + log_theta
-                # if args.verbose:
-                #     print(f"log_theta: {log_theta}")
-                #     print(f"adjusted_score: {adjusted_score}")
+                # Apply adjusted score
+                scores[batch_index, token_id] = adjusted_score
+            
+            print(f"Batch {batch_index}, Informativeness: {informative_levels}")
+            # print(f"Batch {batch_index}, Adjusted Scores: {scores[batch_index]}")
 
-                # Here you could either adjust the score in-place or store this information for later use
-                scores[batch_index, idx] = adjusted_score
+            # 3. Mask tokens with lower informativeness
+            max_informative_level = informative_levels.max().item()
+            i = 0
+            for idx in accepted_indices:
+                token_id = idx.item()
+                if informative_levels[i] < max_informative_level:
+                    scores[batch_index, token_id] = float('-inf')
+                i += 1
+            
+            # print(f"Batch {batch_index}, Masked Adjusted Scores: {scores[batch_index]}")
+
+
+        # for batch_index in range(batch_size):
+        #     accepted_indices = acceptance[batch_index].nonzero().squeeze(-1)
+
+        #     for idx in accepted_indices:
+        #         token_id = idx.item()
+        #         logit = logits[batch_index, idx].item()
+        #         log_logit = log_logits[batch_index, idx].item()
+        #         # Assume a method to get theta for this specific token
+        #         success_rate = self.oracle_trie.get_success_rate_for_candidate_token(current_parent, token_id)
+        #         # if args.verbose:
+        #         #     print(f"token_id: {token_id}")
+        #         #     print(f"logit: {logit}")
+        #         #     print(f"log_logit: {log_logit}")
+        #         #     print(f"successful_rate: {successful_rate}")
+
+        #         if not isinstance(success_rate, torch.Tensor):
+        #             success_rate = torch.tensor(success_rate, dtype=torch.float)
+
+        #         log_theta = torch.log(success_rate)
+        #         # Calculate adjusted score
+        #         adjusted_score = log_logit + log_theta
+        #         # if args.verbose:
+        #         #     print(f"log_theta: {log_theta}")
+        #         #     print(f"adjusted_score: {adjusted_score}")
+
+        #         # Here you could either adjust the score in-place or store this information for later use
+        #         scores[batch_index, idx] = adjusted_score
 
     # TODO: batching
     def process_gad_scores(self, input_ids, scores):
