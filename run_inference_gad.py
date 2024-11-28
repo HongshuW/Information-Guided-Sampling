@@ -59,7 +59,7 @@ def inference_gad(model, tokenizer, prompt, grammar_str, trie):
 
     generated_sequences = output.sequences  # Access the tensor of generated sequences
     # print(generated_sequences.shape)        # Print the shape of the sequences tensor
-    print(generated_sequences)
+    # print(generated_sequences)
 
     input_length = 1 if model.config.is_encoder_decoder else input_ids.shape[1]
     generated_tokens = output.sequences[:, input_length:]
@@ -105,6 +105,7 @@ def run_inference_gad_loading_trie(model, tokenizer):
     start_time = time.time()
     adjusted_trie_before = Trie()
     adjusted_trie_after = Trie()
+    outputs = []
     for i in tqdm(range(NUM_ITER), desc="Running Inference"):
         """Draw sample from the LLM, incorporating trie and EFG"""
         generated_tokens, acceptance_details_history, adjusted_acceptance_details_history, generations, metas, sum_log_prob = inference_gad(model, tokenizer, prompt, grammar_str, adjusted_trie_before)
@@ -135,10 +136,13 @@ def run_inference_gad_loading_trie(model, tokenizer):
                   "prompt": prompt
                   }
         # print(f"result: {result}")
-        print(generations)
+        # print(generations)
+        outputs.append(generations)
 
     end_time = time.time()
     print(f"Total execution time: {end_time - start_time:.2f} seconds.")
+    #adjusted_trie_before.print_all_nodes()
+    print(outputs)
 
 
 if __name__ == "__main__":

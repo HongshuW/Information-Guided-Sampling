@@ -138,7 +138,7 @@ class GrammarAlignedOracleLogitsProcessor(LogitsProcessor):
                 # Apply adjusted score
                 scores[batch_index, token_id] = adjusted_score
             
-            print(f"Batch {batch_index}, Informativeness: {informative_levels}")
+            # print(f"Batch {batch_index}, Informativeness: {informative_levels}")
             # print(f"Batch {batch_index}, Adjusted Scores: {scores[batch_index]}")
 
             # 3. Mask tokens with lower informativeness
