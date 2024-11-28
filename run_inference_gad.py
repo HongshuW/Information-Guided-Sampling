@@ -11,7 +11,7 @@ import time
 NUM_ITER = 10
 MODEL_ID = "TinyLlama/TinyLlama_v1.1" # pretrained llm
 GRAMMAR_PATH = "examples/test/binary_len_5_0.ebnf"
-TRIE_PATH = "tries/binary_len_5_0_trie.json"
+# TRIE_PATH = "tries/binary_len_5_0_trie.json"
 DEVICE = "cpu"
 DTYPE = torch.bfloat16
 MAX_NEW_TOKENS = 512
@@ -19,6 +19,8 @@ TEMPERATURE = 1.0
 REPETITION_PENALTY = 1.0
 TOP_P = 1.0
 TOP_K = 0
+BEAM_SIZE = 1
+DIVERSITY_PENALTY = 0.5
 
 @torch.inference_mode()
 def inference_gad(model, tokenizer, prompt, grammar_str, trie):
@@ -55,6 +57,9 @@ def inference_gad(model, tokenizer, prompt, grammar_str, trie):
         return_dict_in_generate=True,
         output_scores=True,
     )
+
+    generated_sequences = output.sequences  # Access the tensor of generated sequences
+    print(generated_sequences.shape)        # Print the shape of the sequences tensor
 
     input_length = 1 if model.config.is_encoder_decoder else input_ids.shape[1]
     generated_tokens = output.sequences[:, input_length:]

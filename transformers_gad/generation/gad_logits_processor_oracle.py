@@ -29,6 +29,9 @@ class GrammarAlignedOracleLogitsProcessor(LogitsProcessor):
         self.generated_tokens = None
 
     def mask_scores(self, input_ids, scores, device):
+        """
+        Masks scores based on grammar constraints and dynamically adjusts the effective beam size.
+        """
         # resolve each stack to a tensor of True/False for each token
         # indicating acceptance
         # acceptance = self.grammar_acceptor.filter_vocab(self.stacks, device)
@@ -43,10 +46,10 @@ class GrammarAlignedOracleLogitsProcessor(LogitsProcessor):
         # First, calculate the logits for the entire scores tensor
         logits = F.softmax(scores, dim=-1)
 
+        """ For debugging purpose """
         # For raw scores of accepted tokens
         accepted_raw_scores = scores[acceptance].clone().detach()
         self.acceptance_raw_scores_history.append(accepted_raw_scores.cpu())
-
         # For logits of accepted tokens
         accepted_logits = logits[acceptance].clone().detach()
         self.acceptance_logits_history.append(accepted_logits.cpu())
@@ -105,9 +108,12 @@ class GrammarAlignedOracleLogitsProcessor(LogitsProcessor):
                 self.generate_start_index = input_ids.size(1)  # Assuming the initial size is the prompt length
         self.generated_tokens = input_ids[:, self.generate_start_index:]
 
+        # Update accept states for the batch
         self.batch_accept_states = self.grammar_constraint.advance_token_ids(
             input_ids, self.batch_accept_states, self.parse_start_index
         )
+
+        # Apply grammar constraints to mask invalid scores
         self.mask_scores(input_ids, scores, scores.device)
         return scores
 
