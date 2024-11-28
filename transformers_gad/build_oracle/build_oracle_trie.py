@@ -75,7 +75,10 @@ class Trie:
         if parent_node is None:
             return 1
         if candidate_token_id in parent_node.children.keys():
-            return 0
+            if parent_node.children[candidate_token_id].success_rate == 1:
+                return 1
+            else:
+                return 0
         else:
             return 1
 
