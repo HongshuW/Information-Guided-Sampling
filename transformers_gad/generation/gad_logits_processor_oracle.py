@@ -55,21 +55,10 @@ class GrammarAlignedOracleLogitsProcessor(LogitsProcessor):
         self.acceptance_logits_history.append(accepted_logits.cpu())
 
         current_parent = self.oracle_trie.search_last_parent(self.generated_tokens)
-        selected_token_ids = self.apply_oracle_adjustments_with_efi(acceptance, scores, current_parent)
+        self.apply_oracle_adjustments_with_efi(acceptance, scores, current_parent)
         self.get_adjusted_detailed_history(acceptance, scores)
         # Scores to -inf where False
         scores[~acceptance] = float('-inf')
-
-        # Mask unselected tokens
-        batch_size = acceptance.size(0)
-        for batch_index in range(batch_size):
-            accepted_indices = acceptance[batch_index].nonzero().squeeze(-1)
-            for idx in accepted_indices:
-                token_id = idx.item()
-                if token_id != selected_token_ids[0]:
-                    print("score before masking ", scores[batch_index, token_id])
-                    scores[batch_index, token_id] = float('-inf')
-                    print("score after masking ", scores[batch_index, token_id])
 
     def apply_oracle_adjustments_gad(self, acceptance, scores, current_parent):
         logits = F.softmax(scores, dim=-1)
@@ -116,8 +105,6 @@ class GrammarAlignedOracleLogitsProcessor(LogitsProcessor):
 
         logits = F.softmax(scores, dim=-1)
         log_logits = torch.log(logits)
-
-        selected_token_ids = []
 
         # assume one batch only
         for batch_index in range(batch_size):
@@ -167,9 +154,11 @@ class GrammarAlignedOracleLogitsProcessor(LogitsProcessor):
                         max_logit = scores[batch_index, token_id].item()
                         selected_token_id = token_id
                 i += 1
-            selected_token_ids.append(selected_token_id)
-        
-        return selected_token_ids
+            
+            for idx in accepted_indices:
+                token_id = idx.item()
+                if token_id != selected_token_id:
+                    scores[batch_index, token_id] = float('-inf')
 
     # TODO: batching
     def process_gad_scores(self, input_ids, scores):
