@@ -11,7 +11,7 @@ import time
 NUM_ITER = 17
 MODEL_ID = "TinyLlama/TinyLlama_v1.1" # pretrained llm
 GRAMMAR_PATH = "examples/test/binary_len_5_0.ebnf"
-# TRIE_PATH = "tries/binary_len_5_0_trie.json"
+# TRIE_PATH = "tries/gad/binary_len_5_0_trie.json"
 DEVICE = "cpu"
 DTYPE = torch.bfloat16
 MAX_NEW_TOKENS = 512
@@ -141,7 +141,7 @@ def run_inference_gad_loading_trie(model, tokenizer):
 
     end_time = time.time()
     print(f"Total execution time: {end_time - start_time:.2f} seconds.")
-    #adjusted_trie_before.print_all_nodes()
+    adjusted_trie_before.print_all_nodes()
     print(outputs)
 
 
@@ -159,4 +159,4 @@ if __name__ == "__main__":
     model.resize_token_embeddings(len(tokenizer))
 
     run_inference_gad_loading_trie(model, tokenizer)
-    print("GAD Inference Done!")
+    print("Inference Done!")

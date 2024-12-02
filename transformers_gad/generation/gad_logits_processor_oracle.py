@@ -60,9 +60,16 @@ class GrammarAlignedOracleLogitsProcessor(LogitsProcessor):
         # Scores to -inf where False
         scores[~acceptance] = float('-inf')
 
-        # TODO: add condition later
-        if selected_token_ids:
-            input_ids = torch.cat([input_ids, torch.tensor(selected_token_ids, device=input_ids.device).unsqueeze(-1)], dim=1)
+        # Mask unselected tokens
+        batch_size = acceptance.size(0)
+        for batch_index in range(batch_size):
+            accepted_indices = acceptance[batch_index].nonzero().squeeze(-1)
+            for idx in accepted_indices:
+                token_id = idx.item()
+                if token_id != selected_token_ids[0]:
+                    print("score before masking ", scores[batch_index, token_id])
+                    scores[batch_index, token_id] = float('-inf')
+                    print("score after masking ", scores[batch_index, token_id])
 
     def apply_oracle_adjustments_gad(self, acceptance, scores, current_parent):
         logits = F.softmax(scores, dim=-1)
