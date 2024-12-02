@@ -55,7 +55,7 @@ class GrammarAlignedOracleLogitsProcessor(LogitsProcessor):
         self.acceptance_logits_history.append(accepted_logits.cpu())
 
         current_parent = self.oracle_trie.search_last_parent(self.generated_tokens)
-        self.apply_oracle_adjustments(acceptance, scores, current_parent)
+        self.apply_oracle_adjustments_with_efi(acceptance, scores, current_parent)
         self.get_adjusted_detailed_history(acceptance, scores)
         # Scores to -inf where False
         scores[~acceptance] = float('-inf')
@@ -94,7 +94,7 @@ class GrammarAlignedOracleLogitsProcessor(LogitsProcessor):
                 # Here you could either adjust the score in-place or store this information for later use
                 scores[batch_index, idx] = adjusted_score
 
-    def apply_oracle_adjustments(self, acceptance, scores, current_parent):
+    def apply_oracle_adjustments_with_efi(self, acceptance, scores, current_parent):
         """
         Adjusts logits based on trie informativeness and selects the most informative token with the highest logit.
         """
