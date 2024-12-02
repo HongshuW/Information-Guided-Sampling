@@ -55,10 +55,14 @@ class GrammarAlignedOracleLogitsProcessor(LogitsProcessor):
         self.acceptance_logits_history.append(accepted_logits.cpu())
 
         current_parent = self.oracle_trie.search_last_parent(self.generated_tokens)
-        self.apply_oracle_adjustments_with_efi(acceptance, scores, current_parent)
+        selected_token_ids = self.apply_oracle_adjustments_with_efi(acceptance, scores, current_parent)
         self.get_adjusted_detailed_history(acceptance, scores)
         # Scores to -inf where False
         scores[~acceptance] = float('-inf')
+
+        # TODO: add condition later
+        if selected_token_ids:
+            input_ids = torch.cat([input_ids, torch.tensor(selected_token_ids, device=input_ids.device).unsqueeze(-1)], dim=1)
 
     def apply_oracle_adjustments_gad(self, acceptance, scores, current_parent):
         logits = F.softmax(scores, dim=-1)
@@ -106,6 +110,9 @@ class GrammarAlignedOracleLogitsProcessor(LogitsProcessor):
         logits = F.softmax(scores, dim=-1)
         log_logits = torch.log(logits)
 
+        selected_token_ids = []
+
+        # assume one batch only
         for batch_index in range(batch_size):
 
             # print(f"Batch {batch_index}, Original Scores: {scores[batch_index]}")
@@ -141,16 +148,21 @@ class GrammarAlignedOracleLogitsProcessor(LogitsProcessor):
             # print(f"Batch {batch_index}, Informativeness: {informative_levels}")
             # print(f"Batch {batch_index}, Adjusted Scores: {scores[batch_index]}")
 
-            # 3. Mask tokens with lower informativeness
+            # 3. Select token with the highest informative level and highest probability
             max_informative_level = informative_levels.max().item()
+            selected_token_id = None
+            max_logit = float('-inf')
             i = 0
             for idx in accepted_indices:
                 token_id = idx.item()
-                if informative_levels[i] < max_informative_level:
-                    scores[batch_index, token_id] = float('-inf')
+                if informative_levels[i] == max_informative_level:
+                    if scores[batch_index, token_id].item() > max_logit:
+                        max_logit = scores[batch_index, token_id].item()
+                        selected_token_id = token_id
                 i += 1
-            
-            # print(f"Batch {batch_index}, Masked Adjusted Scores: {scores[batch_index]}")
+            selected_token_ids.append(selected_token_id)
+        
+        return selected_token_ids
 
     # TODO: batching
     def process_gad_scores(self, input_ids, scores):
