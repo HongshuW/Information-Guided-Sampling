@@ -8,7 +8,8 @@ import numpy as np
 from tqdm import tqdm
 import time
 
-NUM_ITER = 17
+NUM_ITER = 30
+EXPECTED_SIZE = 17
 MODEL_ID = "TinyLlama/TinyLlama_v1.1" # pretrained llm
 GRAMMAR_PATH = "examples/test/binary_len_5_0.ebnf"
 # TRIE_PATH = "tries/gad/binary_len_5_0_trie.json"
@@ -106,6 +107,8 @@ def run_inference_gad_loading_trie(model, tokenizer):
     adjusted_trie_before = Trie()
     adjusted_trie_after = Trie()
     outputs = []
+    output_set = set()
+    convergence = False
     for i in tqdm(range(NUM_ITER), desc="Running Inference"):
         """Draw sample from the LLM, incorporating trie and EFG"""
         generated_tokens, acceptance_details_history, adjusted_acceptance_details_history, generations, metas, sum_log_prob = inference_gad(model, tokenizer, prompt, grammar_str, adjusted_trie_before)
@@ -138,6 +141,10 @@ def run_inference_gad_loading_trie(model, tokenizer):
         # print(f"result: {result}")
         # print(generations)
         outputs.append(generations)
+        output_set.add(generations)
+        if len(output_set) == EXPECTED_SIZE and not convergence:
+            convergence = True
+            print("convergence in ", i, "iterations")
 
     end_time = time.time()
     print(f"Total execution time: {end_time - start_time:.2f} seconds.")
