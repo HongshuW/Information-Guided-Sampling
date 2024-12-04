@@ -8,8 +8,8 @@ import numpy as np
 from tqdm import tqdm
 import time
 
-NUM_ITER = 30
 EXPECTED_SIZE = 17
+NUM_ITER = EXPECTED_SIZE * 5
 MODEL_ID = "TinyLlama/TinyLlama_v1.1" # pretrained llm
 GRAMMAR_PATH = "examples/test/binary_len_5_0.ebnf"
 # TRIE_PATH = "tries/gad/binary_len_5_0_trie.json"
@@ -21,6 +21,7 @@ REPETITION_PENALTY = 1.0
 TOP_P = 1.0
 TOP_K = 0
 BATCH_SIZE = 1
+PROMPT = "Generate a binary string of length 5"
 
 @torch.inference_mode()
 def inference_gad(model, tokenizer, prompt, grammar_str, trie):
@@ -96,7 +97,7 @@ def run_inference_gad_loading_trie(model, tokenizer):
         print("grammar: ", grammar_str)
 
     # Tokenize prompt into ids
-    prompt = "Generate a binary string of length 5"
+    prompt = PROMPT
     # Convert prompt into input IDs compatible with the model, return a pytorch tensor
     input_ids = tokenizer(
         [prompt], add_special_tokens=False, return_tensors="pt", padding=True
