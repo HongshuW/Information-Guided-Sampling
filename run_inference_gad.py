@@ -13,7 +13,7 @@ EXPECTED_SIZE = 17
 MODEL_ID = "TinyLlama/TinyLlama_v1.1" # pretrained llm
 GRAMMAR_PATH = "examples/test/binary_len_5_0.ebnf"
 # TRIE_PATH = "tries/gad/binary_len_5_0_trie.json"
-DEVICE = "cpu"
+DEVICE = "cuda"
 DTYPE = torch.bfloat16
 MAX_NEW_TOKENS = 512
 TEMPERATURE = 1.0
@@ -141,10 +141,11 @@ def run_inference_gad_loading_trie(model, tokenizer):
         # print(f"result: {result}")
         # print(generations)
         outputs.append(generations)
-        output_set.add(generations)
+        output_set.add(generations[0])
         if len(output_set) == EXPECTED_SIZE and not convergence:
             convergence = True
             print("convergence in ", i, "iterations")
+            break
 
     end_time = time.time()
     print(f"Total execution time: {end_time - start_time:.2f} seconds.")
