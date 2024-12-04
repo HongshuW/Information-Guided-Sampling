@@ -144,12 +144,12 @@ def run_inference_gad_loading_trie(model, tokenizer):
         output_set.add(generations[0])
         if len(output_set) == EXPECTED_SIZE and not convergence:
             convergence = True
-            print("convergence in ", i, "iterations")
+            print("convergence in ", i + 1, "iterations")
             break
 
     end_time = time.time()
     print(f"Total execution time: {end_time - start_time:.2f} seconds.")
-    adjusted_trie_before.print_all_nodes()
+    # adjusted_trie_before.print_all_nodes()
     print(outputs)
 
 
