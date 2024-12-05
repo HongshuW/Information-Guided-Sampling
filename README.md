@@ -1,40 +1,60 @@
-# GD
+# Grammar-Aligned Decoding with Faster Convergence
+
+This project is a proof-of-concept tool for the *Information-Guided Sampling (IGS) algorithm*.
+
+This repository is built from [transformers-GAD](https://github.com/ebmoon/transformers-GAD).
 
 
 
-## Inference
+## Run IGS
 ### Step 0: clone this repo and create environment
-Clone the repository:
+Clone the repository.
+
+Then create a new Conda environment using the provided requirements file.
 ```
-git clone git@github.com:jiayuww/GD.git
-```
-Create a new Conda environment using the provided requirements file. Replace `/path/to/your/env/gd` with the actual path where you want to store your environment:
-```
-conda env create -f environment.yml --prefix /path/to/your/env/gd
+conda create --name <env> python=3.11
+conda activate <env>
+pip install -r requirements.txt
+pip install .
 ```
 
-Activate the environment:
+### Step 1: run the script
+Execute the script:
 ```
-conda activate /path/to/your/env/gd
+python run_inference_gad.py
 ```
-### Step 1: modify configs
-Update the configurations in `run_bare.sh` and `run_gcd_build_oracle.sh` to specify: 
-- `ITER`: Number of outputs to generate for each example. Set this to `50` to obtain some results before Monday, although typically `100` samples are generated.
-- `CACHE_DIR`: Replace `/path/to/where/you/store/hf/models` with the actual path where you store the HuggingFace models. Ensure that there is sufficient storage space. If there are issues, set the global environment variable:
-    ```
-    export HF_HOME=/path/to/where/you/store/hf/models
-    ```
-- `GPUS`: modify this to specify the GPU to use. For example, `0` for GPU 0, `GPUS=(0 1)` for GPUs 0 and 1.
-- `dtype`: Default is `float32`. Only change this if you encounter model loading issues. Changing it to `float16` should help resolve space issues.
 
-### Step 2: run the script
-Execute the scripts in the following order:
-```
-sh run_gcd_build_oracle.sh
-sh run_bare.sh
-```
-Start with `run_gcd_build_oracle.sh`, then run `run_bare.sh` if time permits.
-You can execute these scripts simultaneously in separate terminal windows or sessions (but start with `run_gcd_build_oracle.sh` first!). Both scripts automatically check idle GPUs and automatically start if it's free.
+## Run baseline
+The default algorithm is the Information-Guided Sampling (IGS) algorithm.
 
-### Step 3: Collect the results
-Collect the outputs stored in `OUTPUT_FOLDER` (`results/SLIA`) and tries in `TRIE_FOLDER` (`tries/SLIA`).
+Change the `transformers_gad/generation/gad_logits_processor_oracle.py` file to run the *Adaptive Sampling with Approximate Expected Futures (ASAp) algorithm*:
+
+Line 58:
+Change from 
+```
+self.apply_oracle_adjustments_with_efi(acceptance, scores, current_parent)
+```
+to
+```
+self.apply_oracle_adjustments_gad(acceptance, scores, current_parent)
+```
+
+## Run with different configurations
+Change configurations in `run_inference_gad.py` file.
+
+Default configurations:
+```
+EXPECTED_SIZE = 17
+NUM_ITER = EXPECTED_SIZE * 5
+MODEL_ID = "TinyLlama/TinyLlama_v1.1"
+GRAMMAR_PATH = "examples/test/binary_len_5_0.ebnf"
+DEVICE = "cuda"
+DTYPE = torch.bfloat16
+MAX_NEW_TOKENS = 512
+TEMPERATURE = 1.0
+REPETITION_PENALTY = 1.0
+TOP_P = 1.0
+TOP_K = 0
+BATCH_SIZE = 1
+PROMPT = "Generate a binary string of length 5"
+```
