@@ -1,5 +1,5 @@
 import torch
-from transformers import AutoModelForCausalLM, AutoTokenizer
+from transformers import AutoModelForCausalLM, AutoTokenizer, AutoConfig
 from transformers.generation.logits_process import LogitsProcessorList, InfNanRemoveLogitsProcessor
 from transformers_gad.grammar_utils import IncrementalGrammarConstraint
 from transformers_gad.generation.gad_logits_processor_oracle import GrammarAlignedOracleLogitsProcessor
@@ -110,7 +110,14 @@ if __name__ == "__main__":
     tokenizer.pad_token = tokenizer.eos_token
 
     # Load model
-    model = AutoModelForCausalLM.from_pretrained(MODEL_ID)
+
+    # Load and modify configuration
+    config = AutoConfig.from_pretrained(MODEL_ID)
+    # Adjust rope_scaling: keep only the required keys.
+    # You can either set it manually:
+    config.rope_scaling = {"type": "llama3", "factor": 32.0}
+
+    model = AutoModelForCausalLM.from_pretrained(MODEL_ID, config=config)
     model.to(device)
     model.to(dtype=DTYPE)
     model.resize_token_embeddings(len(tokenizer))
