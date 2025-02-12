@@ -9,7 +9,7 @@ from tqdm import tqdm
 import time
 
 # MODEL_ID = "TinyLlama/TinyLlama_v1.1" # pretrained llm
-MODEL_ID = "meta-llama/Llama-3.1-8B"
+MODEL_ID = "meta-llama/Llama-3.2-1B"
 DEVICE = "cuda"
 # DEVICE = "cpu"
 DTYPE = torch.bfloat16
