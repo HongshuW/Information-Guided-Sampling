@@ -8,9 +8,10 @@ import numpy as np
 from tqdm import tqdm
 import time
 
-MODEL_ID = "TinyLlama/TinyLlama_v1.1" # pretrained llm
-# DEVICE = "cuda"
-DEVICE = "cpu"
+# MODEL_ID = "TinyLlama/TinyLlama_v1.1" # pretrained llm
+MODEL_ID = "meta-llama/Llama-3.1-8B"
+DEVICE = "cuda"
+# DEVICE = "cpu"
 DTYPE = torch.bfloat16
 MAX_NEW_TOKENS = 512
 TEMPERATURE = 1.0
