@@ -1,5 +1,5 @@
 import torch
-from transformers import AutoModelForCausalLM, AutoTokenizer, AutoConfig
+from transformers import AutoModelForCausalLM, AutoTokenizer
 from transformers.generation.logits_process import LogitsProcessorList, InfNanRemoveLogitsProcessor
 from transformers_gad.grammar_utils import IncrementalGrammarConstraint
 from transformers_gad.generation.gad_logits_processor_oracle import GrammarAlignedOracleLogitsProcessor
@@ -9,7 +9,7 @@ from tqdm import tqdm
 import time
 
 # MODEL_ID = "TinyLlama/TinyLlama_v1.1" # pretrained llm
-MODEL_ID = "meta-llama/Llama-3.2-1B"
+MODEL_ID = "meta-llama/Llama-3.1-8B"
 DEVICE = "cuda"
 # DEVICE = "cpu"
 DTYPE = torch.bfloat16
@@ -19,7 +19,7 @@ REPETITION_PENALTY = 1.0
 TOP_P = 1.0
 TOP_K = 0
 BATCH_SIZE = 1
-PROMPT = "Summarize this sentence to context-free grammar:'generate a binary string of length 5 that ends with a 1'"
+PROMPT = "Summarize this sentence to context-free grammar:'generate a binary string of length 5 that ends with a 1', do not include explanation."
 
 @torch.inference_mode()
 def call_LLM(model, tokenizer, prompt):
@@ -103,6 +103,8 @@ def run_semantic_summarization(model, tokenizer):
 
 
 if __name__ == "__main__":
+    torch.cuda.empty_cache()
+
     device = torch.device(DEVICE)
 
     # Load tokenizer
