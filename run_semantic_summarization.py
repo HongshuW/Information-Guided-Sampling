@@ -19,7 +19,7 @@ REPETITION_PENALTY = 1.0
 TOP_P = 1.0
 TOP_K = 0
 BATCH_SIZE = 1
-PROMPT = "Summarize this sentence to context-free grammar:'generate a binary string of length 5 that ends with a 1', do not include explanation."
+PROMPT = "Convert sentence 'generate a binary string of length 5 that ends with a 1' to context-free grammar in EBNF:"
 
 @torch.inference_mode()
 def call_LLM(model, tokenizer, prompt):
