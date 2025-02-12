@@ -110,14 +110,7 @@ if __name__ == "__main__":
     tokenizer.pad_token = tokenizer.eos_token
 
     # Load model
-
-    # Load and modify configuration
-    config = AutoConfig.from_pretrained(MODEL_ID)
-    # Adjust rope_scaling: keep only the required keys.
-    # You can either set it manually:
-    config.rope_scaling = {"type": "llama3", "factor": 32.0}
-
-    model = AutoModelForCausalLM.from_pretrained(MODEL_ID, config=config)
+    model = AutoModelForCausalLM.from_pretrained(MODEL_ID)
     model.to(device)
     model.to(dtype=DTYPE)
     model.resize_token_embeddings(len(tokenizer))
